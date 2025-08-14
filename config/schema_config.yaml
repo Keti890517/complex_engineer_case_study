@@ -1,0 +1,11 @@
+tables:
+  customers:
+    columns:
+      CustomerID: {type: string, nullable: false}
+      CompanyName: {type: string, nullable: false}
+      City: {type: string, nullable: false}
+  orders:
+    columns:
+      OrderID: {type: integer, nullable: false}
+      CustomerID: {type: string, nullable: false}
+      OrderDate: {type: date, nullable: true}
