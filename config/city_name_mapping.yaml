@@ -1,0 +1,12 @@
+# This file is used to map city names that are known to differ from what we find in the API.
+# Other special characters are handled inside the function, so this yaml will only address true exceptions
+
+city_name_mapping:
+  "México D.F.": "Mexico City"
+  "Århus": "Aarhus"
+  "Köln": "Köln"
+  "München": "Munich"
+  "Tsawassen": "Tsawwassen"
+  "Bräcke": "Bräcke"
+  "Frankfurt a.M.": "Frankfurt"
+  "I. de Margarita": "Porlamar"  # Closest country, Margarita Island cannot be found
