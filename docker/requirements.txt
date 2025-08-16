@@ -1,11 +1,11 @@
 pandas==2.2.*
-sqlalchemy==2.0.*
-psycopg2-binary==2.9.*     # PostgreSQL support (remove if not using PG)
-duckdb==1.0.*              # DuckDB support
-requests==2.32.*           # API requests
-tenacity==8.5.*            # retry for APIs
-pydantic==2.8.*            # optional, for API payload models
-openpyxl==3.1.*            # Excel reader (.xlsx)
-xlrd==2.0.*                # optional, if .xls ever appears
-apache-airflow==2.9.*      # core Airflow
-apache-airflow-providers-http==4.10.0   # HttpHook if you want it
+duckdb==1.0.*              
+requests==2.32.*           
+tenacity==8.5.*            
+pydantic==2.8.*            
+openpyxl==3.1.*            
+xlrd==2.0.*                
+apache-airflow==2.9.*      
+apache-airflow-providers-http==4.10.0
+unidecode>=1.3.6
+pytest==7.4.*

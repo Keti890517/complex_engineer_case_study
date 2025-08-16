@@ -8,13 +8,15 @@ from airflow import DAG
 from airflow.operators.python import PythonOperator, ShortCircuitOperator
 from airflow.operators.bash import BashOperator
 
-# --- Make project code importable from /opt/airflow/dags ---
+# --- Make project code importable ---
 import sys
 DAGS_DIR = Path(__file__).resolve().parent
 if str(DAGS_DIR) not in sys.path:
     sys.path.insert(0, str(DAGS_DIR))
+if str(DAGS_DIR / "etl") not in sys.path:
+    sys.path.insert(0, str(DAGS_DIR / "etl"))
 
-# Project modules (kept short & focused)
+# Project ETL modules
 from etl.extract import extract_orders_customers
 from etl.api_integration import enrich_with_weather
 from etl.region_mapping import load_region_mapping
@@ -22,7 +24,7 @@ from etl.transform import enrich_with_region
 from etl.load import load_to_db
 
 ARTIFACTS = DAGS_DIR / "artifacts"
-DATA_DIR = DAGS_DIR / "data"             # where northwind.db + region_mapping.xlsx live (mounted)
+DATA_DIR = DAGS_DIR / "data"             # northwind.db + region_mapping.xlsx live here
 TARGET_DB = DATA_DIR / "target.db"       # output DB
 
 DEFAULT_ARGS = {
@@ -31,23 +33,23 @@ DEFAULT_ARGS = {
     "retry_delay": timedelta(minutes=2),
 }
 
+# ------------------- ETL task functions -------------------
 def _ensure_dirs():
     ARTIFACTS.mkdir(parents=True, exist_ok=True)
 
 def _task_extract():
-    # Extract & persist lightweight artifacts for downstream tasks/tests
     customers_df, orders_df = extract_orders_customers()
     (ARTIFACTS / "customers.csv").write_text(customers_df.to_csv(index=False))
     (ARTIFACTS / "orders.csv").write_text(orders_df.to_csv(index=False))
 
 def _weather_gate() -> bool:
-    # Skip weather steps until the API key is configured
+    # Skip weather step if no API key
     return bool(os.getenv("OPENWEATHER_API_KEY"))
 
 def _task_api():
     import pandas as pd
     customers = pd.read_csv(ARTIFACTS / "customers.csv")
-    customers_weather = enrich_with_weather(customers)  # requires OPENWEATHER_API_KEY
+    customers_weather = enrich_with_weather(customers)
     (ARTIFACTS / "customers_weather.csv").write_text(customers_weather.to_csv(index=False))
 
 def _task_region_mapping():
@@ -64,18 +66,18 @@ def _task_transform():
 def _task_load():
     import pandas as pd
     enriched = pd.read_csv(ARTIFACTS / "enriched_customers.csv")
-    load_to_db(enriched, table_name="enriched_customers")  # writes to data/target.db
+    load_to_db(enriched, table_name="enriched_customers")
 
-
+# ------------------- DAG definition -------------------
 with DAG(
     dag_id="northwind_weather_etl",
     start_date=datetime(2025, 1, 1),
-    schedule_interval=None,     # enable a cron later if you want
+    schedule_interval=None,
     catchup=False,
     default_args=DEFAULT_ARGS,
     doc_md="""
     ETL: Northwind (SQLite) + OpenWeather + Region mapping (Excel).
-    DQ is enforced via pytest tasks that run after each stage.
+    Data quality enforced via pytest tasks after key stages.
     """,
 ) as dag:
 
@@ -84,7 +86,7 @@ with DAG(
         python_callable=_ensure_dirs,
     )
 
-    # ---------- ETL stages ----------
+    # ETL stages
     extract = PythonOperator(
         task_id="extract",
         python_callable=_task_extract,
@@ -115,42 +117,25 @@ with DAG(
         python_callable=_task_load,
     )
 
-    # ---------- Pytest DQ tasks ----------
-    # We run the specific test file(s) after each stage.
-    # PYTHONPATH makes `etl/` importable; tests log to Airflow task log.
+    # ------------------- Pytest DQ tasks -------------------
+    # Only the existing test files are included
     run_extract_tests = BashOperator(
         task_id="test_extract",
-        bash_command="export PYTHONPATH=/opt/airflow/dags && pytest -v --tb=short tests/test_extract.py",
-    )
-
-    run_region_tests = BashOperator(
-        task_id="test_region_mapping",
-        bash_command="export PYTHONPATH=/opt/airflow/dags && pytest -v --tb=short tests/test_region_mapping.py",
-    )
-
-    run_api_tests = BashOperator(
-        task_id="test_api_integration",
-        bash_command="export PYTHONPATH=/opt/airflow/dags && pytest -v --tb=short tests/test_api_integration.py",
+        bash_command="export PYTHONPATH=/opt/airflow/dags:/opt/airflow/etl && pytest -v --tb=short tests/test_extract.py",
     )
 
     run_transform_tests = BashOperator(
         task_id="test_transform",
-        bash_command="export PYTHONPATH=/opt/airflow/dags && pytest -v --tb=short tests/test_transform.py",
+        bash_command="export PYTHONPATH=/opt/airflow/dags:/opt/airflow/etl && pytest -v --tb=short tests/test_transform.py",
     )
 
     run_load_tests = BashOperator(
         task_id="test_load",
-        bash_command="export PYTHONPATH=/opt/airflow/dags && pytest -v --tb=short tests/test_load.py",
+        bash_command="export PYTHONPATH=/opt/airflow/dags:/opt/airflow/etl && pytest -v --tb=short tests/test_load.py",
     )
 
-    # ---------- Dependencies ----------
+    # ------------------- DAG dependencies -------------------
     ensure_dirs >> extract >> run_extract_tests
-
-    # Region mapping can run right after extraction (independent of weather)
-    run_extract_tests >> region_map >> run_region_tests
-
-    # Weather path (skippable if no API key yet)
-    run_extract_tests >> weather_key_present >> api_integration >> run_api_tests
-
-    # Transform needs both mapping + api
-    [run_region_tests, run_api_tests] >> transform >> run_transform_tests >> load >> run_load_tests
+    run_extract_tests >> region_map >> api_integration >> weather_key_present
+    weather_key_present >> api_integration >> run_transform_tests
+    run_transform_tests >> transform >> load >> run_load_tests

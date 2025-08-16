@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-airflow db init
+# Initialize DB
+airflow db migrate
 
-# Create admin if missing
+# Create admin user if missing
 airflow users create \
   --username admin \
   --password admin \
@@ -12,7 +13,7 @@ airflow users create \
   --role Admin \
   --email admin@example.com || true
 
-# Optionally store OWM key as Airflow Variable for tasks to read
-if [ -n "${OWM_API_KEY:-}" ]; then
-  airflow variables set OWM_API_KEY "${OWM_API_KEY}"
+# Set OpenWeather API key as Airflow Variable
+if [ -n "${OPENWEATHER_API_KEY:-}" ]; then
+  airflow variables set OPENWEATHER_API_KEY "${OPENWEATHER_API_KEY}"
 fi
