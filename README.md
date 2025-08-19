@@ -133,3 +133,21 @@ DAG: northwind_weather_etl
 - Clear logging and DQ checks ensure traceability and correctness.
 - API key in .env (must be added), not tracked in Git to avoid leakage
 - Modularity with central config file and component-oriented folder structure
+
+## ETL Workflow Diagram
+
+```mermaid
+flowchart TD
+    A[Ensure Directories] --> B[Extract Orders & Customers]
+    B --> C[Test Extract]
+    B --> D[Weather API Gate]
+    D -->|API key present| E[API Integration]
+    C --> F[Load Region Mapping]
+    E --> F
+    F --> G[Transform & Enrich Data]
+    G --> H[Test Transform]
+    H --> I[Region Weather Analysis]
+    H --> J[Load Enriched Data]
+    J --> K[Test Load]
+    K --> L[Data Quality Summary / Logging]
+```
