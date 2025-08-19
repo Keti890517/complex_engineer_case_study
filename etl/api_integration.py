@@ -5,25 +5,18 @@ import pandas as pd
 import requests
 import yaml
 from unidecode import unidecode
-from dotenv import load_dotenv
+from config.config import CONFIG_DIR
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Paths
-BASE_DIR = os.path.dirname(os.path.dirname(__file__))
-COUNTRY_MAPPING_PATH = os.path.join(BASE_DIR, "config", "country_code_mapping.yaml")
-CITY_MAPPING_PATH = os.path.join(BASE_DIR, "config", "city_name_mapping.yaml")
+# ---------------- Paths ----------------
+COUNTRY_MAPPING_PATH = CONFIG_DIR / "country_code_mapping.yaml"
+CITY_MAPPING_PATH = CONFIG_DIR / "city_name_mapping.yaml"
 
-# Load environment variables
-load_dotenv()
-API_KEY = os.getenv("OPENWEATHER_API_KEY")
-if not API_KEY:
-    raise EnvironmentError("OPENWEATHER_API_KEY not found in environment variables.")
-
-# Load country mapping
-if not os.path.exists(COUNTRY_MAPPING_PATH):
+# ---------------- Load country mapping ----------------
+if not COUNTRY_MAPPING_PATH.exists():
     raise FileNotFoundError(f"Country mapping file not found at {COUNTRY_MAPPING_PATH}")
 
 with open(COUNTRY_MAPPING_PATH, "r") as f:
@@ -33,8 +26,8 @@ with open(COUNTRY_MAPPING_PATH, "r") as f:
 country_mapping = {k.strip().lower(): v for k, v in country_mapping_raw.items()}
 logger.info(f"Loaded country codes for {len(country_mapping)} countries")
 
-# Load city mapping
-if not os.path.exists(CITY_MAPPING_PATH):
+# ---------------- Load city mapping ----------------
+if not CITY_MAPPING_PATH.exists():
     logger.warning(f"City mapping file not found at {CITY_MAPPING_PATH}, proceeding without it.")
     city_name_mapping = {}
 else:
@@ -44,6 +37,7 @@ else:
     city_name_mapping = {k.strip().lower(): v for k, v in city_mapping_yaml.get("city_name_mapping", {}).items()}
     logger.info(f"Loaded city mappings for {len(city_name_mapping)} cities")
 
+# ---------------- Functions ----------------
 def get_country_code(country_name: str):
     """Return 2-letter country code from full country name, case-insensitive."""
     if not isinstance(country_name, str) or not country_name.strip():
@@ -66,10 +60,8 @@ def normalize_city_name(city: str) -> str:
     if not city or not isinstance(city, str):
         return city
     city_key = city.strip().lower()
-    # Respect mapping exactly if exists
     if city_key in city_name_mapping:
         return city_name_mapping[city_key]
-    # Otherwise apply unidecode for API
     return unidecode(city.strip())
 
 def fetch_weather(city: str, country_code: str):
@@ -78,7 +70,11 @@ def fetch_weather(city: str, country_code: str):
         return None
 
     city_api = normalize_city_name(city)
-    url = f"http://api.openweathermap.org/data/2.5/weather?q={city_api},{country_code}&appid={API_KEY}&units=metric"
+    api_key = os.getenv("OPENWEATHER_API_KEY")
+    if not api_key:
+        raise EnvironmentError("OPENWEATHER_API_KEY not found in environment variables.")
+    
+    url = f"http://api.openweathermap.org/data/2.5/weather?q={city_api},{country_code}&appid={api_key}&units=metric"
     try:
         resp = requests.get(url)
         resp.raise_for_status()
@@ -87,7 +83,7 @@ def fetch_weather(city: str, country_code: str):
         logger.error(f"Error fetching weather for '{city}' ({country_code}): {e}")
         return None
 
-def enrich_with_weather(customers_df: pd.DataFrame) -> pd.DataFrame:
+def enrich_with_weather(customers_df: pd.DataFrame, api_key: str | None = None) -> pd.DataFrame:
     """Enrich customers_df with weather data from OpenWeather."""
     if customers_df is None or customers_df.empty:
         logger.warning("Input DataFrame is empty or None, skipping weather enrichment.")
@@ -96,7 +92,13 @@ def enrich_with_weather(customers_df: pd.DataFrame) -> pd.DataFrame:
     if "City" not in customers_df.columns or "Country" not in customers_df.columns:
         raise ValueError("Input DataFrame must contain 'City' and 'Country' columns")
 
-    # Trim whitespace from City and Country
+    # Use provided api_key or fallback to environment variable
+    if api_key is None:
+        api_key = os.getenv("OPENWEATHER_API_KEY")
+    if not api_key:
+        raise EnvironmentError("OPENWEATHER_API_KEY not found in environment variables.")
+
+    # Trim whitespace
     customers_df["City"] = customers_df["City"].astype(str).str.strip()
     customers_df["Country"] = customers_df["Country"].astype(str).str.strip()
 
@@ -110,18 +112,25 @@ def enrich_with_weather(customers_df: pd.DataFrame) -> pd.DataFrame:
         country_name = row["Country"]
 
         country_code = get_country_code(country_name)
-        if not country_code or not city or not isinstance(city, str):
+        if not country_code or not city:
             skipped_rows.append((city, country_name))
             continue
 
-        weather_json = fetch_weather(city, country_code)
-        if weather_json:
-            weather_data.append({
-                "City": city,
-                "Country": country_name,
-                "Weather": weather_json.get("weather", [{}])[0].get("description"),
-                "Temperature": weather_json.get("main", {}).get("temp")
-            })
+        url = f"http://api.openweathermap.org/data/2.5/weather?q={normalize_city_name(city)},{country_code}&appid={api_key}&units=metric"
+        try:
+            resp = requests.get(url)
+            resp.raise_for_status()
+            weather_json = resp.json()
+        except requests.RequestException as e:
+            logger.error(f"Error fetching weather for '{city}' ({country_name}): {e}")
+            continue
+
+        weather_data.append({
+            "City": city,
+            "Country": country_name,
+            "Weather": weather_json.get("weather", [{}])[0].get("description"),
+            "Temperature": weather_json.get("main", {}).get("temp")
+        })
 
         calls_made += 1
         if calls_made % 60 == 0:
