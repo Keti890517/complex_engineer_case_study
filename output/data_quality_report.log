@@ -1,0 +1,55 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.2, pytest-8.4.1, pluggy-1.6.0
+rootdir: /opt/airflow/tests
+plugins: anyio-4.3.0, time-machine-2.14.1
+collected 4 items
+
+../../opt/airflow/tests/test_extract.py .
+../../opt/airflow/tests/test_load.py ..
+../../opt/airflow/tests/test_transform.py .
+
+============================== 4 passed in 1.01s ===============================
+ather,temperature,region starting 2016,region until 2017
+Val2 ,IT,Val2,IT,,,,,,,,,,,
+VALON,IT,Valon Hoti,IT,,,,,,,,,,,
+
+--- Rows with null region ---
+customerid,companyname,contactname,contacttitle,address,city,region,postalcode,country,phone,fax,weather,temperature,region starting 2016,region until 2017
+Val2 ,IT,Val2,IT,,,,,,,,,,,
+VALON,IT,Valon Hoti,IT,,,,,,,,,,,
+
+--- Rows with null temperature ---
+customerid,companyname,contactname,contacttitle,address,city,region,postalcode,country,phone,fax,weather,temperature,region starting 2016,region until 2017
+SANTG,Santé Gourmet,Jonas Bergulfsen,Owner,Erling Skakkes gate 78,Stavern,Scandinavia,4110,Norway,07-98 92 35,07-98 92 47,,,Sweden,Europe
+Val2 ,IT,Val2,IT,,,,,,,,,,,
+VALON,IT,Valon Hoti,IT,,,,,,,,,,,
+== load_schema ==
+
+== load_data ==
+ERROR: Nulls found in city: 2
+ERROR: Nulls found in region: 2
+ERROR: Nulls found in temperature: 3
+
+
+--- Rows with null city ---
+customerid,companyname,contactname,contacttitle,address,city,region,postalcode,country,phone,fax,weather,temperature,region starting 2016,region until 2017
+Val2 ,IT,Val2,IT,,,,,,,,,,,
+VALON,IT,Valon Hoti,IT,,,,,,,,,,,
+
+--- Rows with null region ---
+customerid,companyname,contactname,contacttitle,address,city,region,postalcode,country,phone,fax,weather,temperature,region starting 2016,region until 2017
+Val2 ,IT,Val2,IT,,,,,,,,,,,
+VALON,IT,Valon Hoti,IT,,,,,,,,,,,
+
+--- Rows with null temperature ---
+customerid,companyname,contactname,contacttitle,address,city,region,postalcode,country,phone,fax,weather,temperature,region starting 2016,region until 2017
+SANTG,Santé Gourmet,Jonas Bergulfsen,Owner,Erling Skakkes gate 78,Stavern,Scandinavia,4110,Norway,07-98 92 35,07-98 92 47,,,Sweden,Europe
+Val2 ,IT,Val2,IT,,,,,,,,,,,
+VALON,IT,Valon Hoti,IT,,,,,,,,,,,
+== enriched_schema ==
+
+== enriched_data ==
+ERROR: Nulls found in city: 2
+ERROR: Nulls found in region: 2
+ERROR: Nulls found in temperature: 3
+

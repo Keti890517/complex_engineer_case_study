@@ -1,0 +1,11 @@
+region,customers,avg_temp_c,min_temp_c,max_temp_c
+British Isles,8,21.747500000000002,17.87,23.27
+Central America,5,20.53,20.53,20.53
+Eastern Europe,1,22.19,22.19,22.19
+North America,16,22.82,14.42,30.7
+Northern Europe,4,15.079999999999998,9.97,20.61
+Scandinavia,3,12.24,10.06,14.42
+South America,16,23.615625,14.52,30.35
+Southern Europe,10,26.781,18.99,33.16
+Western Europe,28,24.38214285714286,17.75,28.0
+,2,,,
