@@ -21,16 +21,13 @@ services:
       dockerfile: docker/Dockerfile
     container_name: airflow-init
     depends_on:
-      postgres:
-        condition: service_healthy
+      - postgres
     environment:
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
       AIRFLOW__CORE__LOAD_EXAMPLES: "False"
-    entrypoint: >
-      bash -c "airflow db upgrade &&
-               airflow users create --username admin --firstname Admin --lastname User --role Admin --email admin@example.com --password admin &&
-               airflow connections add 'openweather' --conn-type 'HTTP' --conn-host 'https://api.openweathermap.org/data/2.5/weather'"
+      OPENWEATHER_API_KEY: "${OPENWEATHER_API_KEY:-}"
+    entrypoint: ["/opt/airflow/init_airflow.sh"]
     restart: "no"
 
   airflow-webserver:
@@ -44,9 +41,11 @@ services:
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
       AIRFLOW__CORE__LOAD_EXAMPLES: "False"
+      AIRFLOW__WEBSERVER__SECRET_KEY: "mysecretkey123"
+      OPENWEATHER_API_KEY: "${OPENWEATHER_API_KEY:-}"
+    command: webserver
     ports:
       - "8080:8080"
-    command: webserver
     volumes:
       - ./dags:/opt/airflow/dags
       - ./etl:/opt/airflow/etl
@@ -54,6 +53,7 @@ services:
       - ./data:/opt/airflow/data
       - ./config:/opt/airflow/config
       - ./output:/opt/airflow/output
+    user: "${AIRFLOW_UID}:${AIRFLOW_GID}"
     restart: always
 
   airflow-scheduler:
@@ -67,6 +67,8 @@ services:
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
       AIRFLOW__CORE__LOAD_EXAMPLES: "False"
+      AIRFLOW__WEBSERVER__SECRET_KEY: "mysecretkey123"
+      OPENWEATHER_API_KEY: "${OPENWEATHER_API_KEY:-}"
     command: scheduler
     volumes:
       - ./dags:/opt/airflow/dags
@@ -75,6 +77,7 @@ services:
       - ./data:/opt/airflow/data
       - ./config:/opt/airflow/config
       - ./output:/opt/airflow/output
+    user: "${AIRFLOW_UID:-50000}:${AIRFLOW_GID:-0}"
     restart: always
 
 volumes:
