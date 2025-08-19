@@ -1,33 +1,29 @@
-import logging
+import pandas as pd
+from tests import dq
+from config.config import OUTPUT_DIR, ENRICHED_CSV, REGION_MAPPING_XLSX
 
-def test_enriched_data_quality(sample_enriched_data, sample_region_mapping):
-    logger = logging.getLogger(__name__)
-    df = sample_enriched_data
+# Ensure output dir exists
+OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-    # 1. Schema validation
-    expected_cols = {
-        "CustomerID", "CompanyName", "City", "Country",
-        "temperature", "weather_description", "Region"
-    }
-    assert expected_cols.issubset(df.columns), "Enriched data schema mismatch"
+def test_enriched_data_quality():
+    # Load enriched data
+    df = pd.read_csv(ENRICHED_CSV)
+    df.columns = df.columns.str.lower()
 
-    # 2. Null checks
-    key_fields = ["City", "temperature", "Region"]
-    for field in key_fields:
-        if df[field].isna().any():
-            logger.warning(f"⚠ Missing values in {field}")
-    
-    # 3. Duplicate records
-    if df.duplicated().any():
-        logger.warning("⚠ Duplicate records found")
-    
-    # 4. Weather type validation
-    for idx, row in df.iterrows():
-        if not isinstance(row["temperature"], (int, float)):
-            logger.warning(f"⚠ Invalid temperature at row {idx}")
+    # Load region mapping from Excel
+    mapping = pd.read_excel(REGION_MAPPING_XLSX)
+    mapping.columns = mapping.columns.str.lower()
 
-    # 5. Region mapping check
-    mapped_countries = set(sample_region_mapping["Country"])
-    for country in df["Country"].unique():
-        if country not in mapped_countries:
-            logger.warning(f"⚠ Country {country} not found in region mapping")
+    # Run DQ checks (will log nulls internally)
+    report_schema = dq.check_enriched_schema(df)
+    report_data = dq.check_enriched_data(df, mapping, log_null_rows=True)
+
+    # Ensure 'stage' key exists
+    report_schema.setdefault("stage", "schema_check")
+    report_data.setdefault("stage", "data_check")
+
+    # Write DQ report
+    dq.write_report([report_schema, report_data], OUTPUT_DIR)
+
+    # Assertions: ignore null/missing rows, only fail for schema issues
+    assert not report_schema["errors"], f"Schema errors: {report_schema['errors']}"

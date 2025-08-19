@@ -1,27 +1,21 @@
-import pandas as pd
-import logging
+from etl.extract import extract_orders_customers
+from etl.region_mapping import load_region_mapping
+from tests import dq
+from config.config import OUTPUT_DIR
 
-def test_orders_customers_schema(db_connection, sample_region_mapping):
-    logger = logging.getLogger(__name__)
+# Ensure output dir exists
+OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-    orders = pd.read_sql("SELECT * FROM Orders", db_connection)
-    customers = pd.read_sql("SELECT * FROM Customers", db_connection)
+def test_source_schemas_and_log_report():
+    customers_df, orders_df = extract_orders_customers()
+    mapping_df = load_region_mapping()
 
-    # Schema validation
-    expected_orders_cols = {"OrderID", "CustomerID", "OrderDate", "ShipCity"}
-    expected_customers_cols = {"CustomerID", "CompanyName", "City", "Country"}
-    assert expected_orders_cols.issubset(orders.columns), "Orders schema mismatch"
-    assert expected_customers_cols.issubset(customers.columns), "Customers schema mismatch"
-    logger.info("✅ Orders & Customers schema validated successfully.")
+    # lowercase for consistency
+    customers_df.columns = customers_df.columns.str.lower()
+    orders_df.columns = orders_df.columns.str.lower()
+    mapping_df.columns = mapping_df.columns.str.lower()
 
-    # Null checks
-    if customers["City"].isna().any():
-        logger.warning("⚠ Null City found in Customers")
-    if orders["CustomerID"].isna().any():
-        logger.warning("⚠ Null CustomerID found in Orders")
+    report = dq.check_source_schemas(customers_df, orders_df, mapping_df)
+    dq.write_report([report], OUTPUT_DIR)
 
-    # Region mapping check
-    mapped_countries = set(sample_region_mapping["Country"])
-    for country in customers["Country"].unique():
-        if country not in mapped_countries:
-            logger.warning(f"⚠ Country {country} not found in region mapping")
+    assert not report["errors"], f"Source schema errors: {report['errors']}"

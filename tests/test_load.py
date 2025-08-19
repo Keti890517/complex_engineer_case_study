@@ -1,19 +1,41 @@
 import pandas as pd
 import sqlite3
-import logging
+from tests import dq
+from config.config import OUTPUT_DIR, TARGET_DB, ENRICHED_CSV
 
-def test_loaded_data_matches_enriched(sample_enriched_data, tmp_path):
-    logger = logging.getLogger(__name__)
-    db_path = tmp_path / "target.db"
-    conn = sqlite3.connect(db_path)
+# Ensure output dir exists
+OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-    # Write enriched data to DB
-    sample_enriched_data.to_sql("enriched_customers", conn, index=False)
+def test_tables_exist_in_target_db():
+    """Check target.db exists and contains required tables."""
+    assert TARGET_DB.exists(), "target.db not created"
 
-    loaded_df = pd.read_sql("SELECT * FROM enriched_customers", conn)
-    conn.close()
+    conn = sqlite3.connect(TARGET_DB)
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT name FROM sqlite_master WHERE type='table'")
+        tables = {row[0] for row in cur.fetchall()}
+    finally:
+        conn.close()
 
-    # Basic checks
-    assert not loaded_df.empty, "Loaded dataset is empty"
-    assert "Region" in loaded_df.columns, "Missing 'Region' in loaded data"
-    logger.info(f"✅ Loaded dataset contains {len(loaded_df)} rows and correct schema.")
+    assert "region_mapping" in tables, "region_mapping table missing in target.db"
+    assert "enriched_customers" in tables, "enriched_customers table missing in target.db"
+
+def test_loaded_data_quality():
+    # Load enriched data
+    loaded_df = pd.read_csv(ENRICHED_CSV)
+    loaded_df.columns = loaded_df.columns.str.lower()
+
+    # Schema check
+    report_schema = dq.check_enriched_schema(loaded_df)
+    report_schema["stage"] = "load_schema"
+
+    # Data check (this will log nulls internally)
+    report_data = dq.check_enriched_data(loaded_df, mapping_df=pd.DataFrame(), log_null_rows=True)
+    report_data["stage"] = "load_data"
+
+    # Write report
+    dq.write_report([report_schema, report_data], OUTPUT_DIR)
+
+    # Assertions only for schema issues
+    assert not report_schema["errors"], f"Schema errors: {report_schema['errors']}"
