@@ -46,7 +46,7 @@ TESTS_DIR = PROJECT_ROOT / "tests"  # dynamic test path
 DEFAULT_ARGS = {
     "owner": "airflow",
     "retries": 1,
-    "retry_delay": timedelta(minutes=2),
+    "retry_delay": timedelta(minutes=1),
 }
 
 # ------------------- ETL task functions -------------------
@@ -103,7 +103,7 @@ def _task_region_analysis():
 with DAG(
     dag_id="northwind_weather_etl",
     start_date=datetime(2025, 1, 1),
-    schedule_interval=None,
+    schedule="@daily",
     catchup=False,
     default_args=DEFAULT_ARGS,
     doc_md="""ETL: Northwind (SQLite) + OpenWeather + Region mapping (Excel).""",
