@@ -13,4 +13,12 @@ def transform_data(customers_df, orders_df, mapping_df=None):
     """Main transformation entry point."""
     if mapping_df is not None:
         customers_df = enrich_with_region(customers_df, mapping_df)
+
+    # Deduplicate enriched dataset
+    customers_before = len(customers_df)
+    customers_df = customers_df.drop_duplicates(subset=["CustomerID", "Country"])
+    customers_after= len(customers_df)
+    if customers_before != customers_after:
+        logger.info(f"Dropped {customers_before - customers_after} duplicate customers based on CustomerID and Country")
+    
     return customers_df, orders_df
