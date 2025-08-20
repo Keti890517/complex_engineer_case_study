@@ -34,7 +34,7 @@ Clone the Github repo and CD into it, ensuring the MAKEFILE is visible when usin
 
 Execute **`'make up'`** command from your bash terminal, this will do the following:
 - Creates a .env file in the project root
-    - Prompts you to add your api key
+    - Prompts you to add your Openweather api key - you can use yours or use the one received via secure sharing
     - Creates airflow user ids
 - Prepares Folders
 - Sets proper ownership and permissions once:
