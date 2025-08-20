@@ -30,43 +30,15 @@ This project demonstrates an ETL pipeline combining Northwind SQLite data with O
 
 ## Environment Setup
 
-Create a `.env` file in the project root, remember to add your OWN openweather api key:
-
-```bash
-# .env
-AIRFLOW_UID=50000
-AIRFLOW_GID=0
-OPENWEATHER_API_KEY=your_openweather_api_key_here
-```
-
-Prepare Folders
-
-Set proper ownership and permissions once:
-
-```bash
-# Create required folders if they don't exist
-mkdir -p data output
-
-# Set ownership to match AIRFLOW_UID/GID
-sudo chown -R 50000:0 data output
-sudo chmod -R 775 data output
-```
-
-Build & Run Docker
-
-```bash
-# Build the Airflow images:
-docker-compose build
-
-# Initialize Airflow:
-docker-compose run --rm airflow-init
-
-# Start Airflow scheduler and webserver:
-docker-compose up -d
-```
+Execute **`'make up'`** command from your bash terminal, this will do the following:
+- Creates a .env file in the project root
+    - Prompts you to add your api key
+    - Creates airflow user ids
+- Prepares Folders
+- Sets proper ownership and permissions once:
+- Builds & Runs Docker
 
 Airflow webserver: http://localhost:8080
-
 DAG: northwind_weather_etl
 
 ## ETL Pipeline Tasks
