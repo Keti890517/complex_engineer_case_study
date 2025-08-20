@@ -30,6 +30,8 @@ This project demonstrates an ETL pipeline combining Northwind SQLite data with O
 
 ## Environment Setup
 
+Clone the Github repo and CD into it, ensuring the MAKEFILE is visible when using ls.
+
 Execute **`'make up'`** command from your bash terminal, this will do the following:
 - Creates a .env file in the project root
     - Prompts you to add your api key
