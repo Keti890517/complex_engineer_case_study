@@ -42,8 +42,11 @@ init:
 setup-dirs:
 	@echo "📂 Creating and fixing permissions for data/ and output/..."
 	mkdir -p data output
-	sudo chown -R 50000:0 data output
-	sudo chmod -R 775 data output
+	@if [ "$$(uname)" != "Linux" ]; then \
+	  echo "⚠️ Skipping chown (not needed on Windows/macOS)"; \
+	else \
+	  sudo chown -R 50000:0 data output; \
+	fi
 
 # Ensure .env exists
 check-env:
