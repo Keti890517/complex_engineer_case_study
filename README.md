@@ -28,7 +28,8 @@ This project demonstrates an ETL pipeline combining Northwind SQLite data with O
 - On Windows you need to have GNU make for the MAKEFILE:
     - Download: https://gnuwin32.sourceforge.net/downlinks/make.php
     - Ensure the folder that contains make.exe is added to system PATH
-    - Restart your terminal
+    - Alternatively, use direct command with full path, such as "C:\Program Files\GnuWin32\bin\make.exe" up
+    - Use a bash terminal, such as Git bash
     - Verify installation with make --version
 
 ---
