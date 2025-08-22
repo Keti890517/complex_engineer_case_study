@@ -46,11 +46,14 @@ except PermissionError: print('⚠️ Could not set permissions, check manually.
 
 # Ensure .env exists (cross-platform)
 check-env:
-	@python -c "import os; env_file='.env'; \
-if not os.path.exists(env_file): \
-    api_key=input('Enter your OpenWeather API key: '); \
-    with open(env_file,'w') as f: \
-        f.write(f'AIRFLOW_UID=50000\nAIRFLOW_GID=0\nOPENWEATHER_API_KEY={api_key}\n'); \
-    print('.env file created ✅'); \
-else: \
-    print('✅ Using existing .env')"
+	@python - <<END
+import os
+env_file = '.env'
+if not os.path.exists(env_file):
+    api_key = input('Enter your OpenWeather API key: ')
+    with open(env_file, 'w') as f:
+        f.write(f"AIRFLOW_UID=50000\nAIRFLOW_GID=0\nOPENWEATHER_API_KEY={api_key}\n")
+    print('.env file created ✅')
+else:
+    print('✅ Using existing .env')
+END
