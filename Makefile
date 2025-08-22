@@ -28,10 +28,15 @@ build:
 	@echo "🔨 Building Airflow images..."
 	docker compose build
 
-# Initialize Airflow (safe to rerun)
+# Initialize Airflow
 init:
-	@echo "⚙️ Initializing Airflow database and users..."
-	docker compose run --rm airflow-init
+	@echo "⚙️ Checking if Airflow DB is already initialized..."
+	@if docker compose exec -T postgres psql -U airflow -d airflow -c '\dt' >/dev/null 2>&1; then \
+		echo "✅ Airflow DB already initialized, skipping init."; \
+	else \
+		echo "🔧 Initializing Airflow database and users..."; \
+		docker compose run --rm airflow-init; \
+	fi
 
 # Ensure required folders exist with correct ownership
 setup-dirs:
