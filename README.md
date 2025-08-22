@@ -25,14 +25,19 @@ This project demonstrates an ETL pipeline combining Northwind SQLite data with O
 - Docker & Docker Compose installed
 - Python 3.12 (for local tests outside Docker)
 - Optional: `sudo` access for folder ownership
+- On Windows you need to have GNU make for the MAKEFILE:
+    - Download: https://gnuwin32.sourceforge.net/downlinks/make.php
+    - Ensure the folder that contains make.exe is added to system PATH
+    - Restart your terminal
+    - Verify installation with make --version
 
 ---
 
 ## Environment Setup
 
-Clone the Github repo and CD into it, ensuring the python tasks.py file is visible when using ls.
+Clone the Github repo and CD into it, ensuring the MAKEFILE file is visible
 
-Execute **`'python tasks.py up'`** command from your terminal, this will do the following:
+Execute **`'make up'`** command from your terminal, this will do the following:
 - Creates a .env file in the project root
     - Prompts you to add your Openweather api key - you can use yours or use the one received via secure sharing
     - Creates airflow user ids
