@@ -35,12 +35,12 @@ init:
 	@echo "⚙️ Initializing Airflow database and users..."
 	docker compose run --rm airflow-init
 
-# Ensure required folders exist with correct ownership
+# Ensure required folders exist with best-effort permissions
 setup-dirs:
 	@echo "📂 Creating data/ and output/ folders..."
 	@python -c "import os; os.makedirs('data', exist_ok=True); os.makedirs('output', exist_ok=True)"
 	@echo "🔧 Setting folder permissions (best-effort, platform-dependent)..."
-	@python -c "import os, sys; \
+	@python -c "import os; import sys; \
 try: os.chmod('data', 0o775); os.chmod('output', 0o775); \
 except PermissionError: print('⚠️ Could not set permissions, check manually.')"
 
