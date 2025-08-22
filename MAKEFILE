@@ -1,6 +1,8 @@
 # Default .env location
 ENV_FILE=.env
 
+# ---------------- Commands ----------------
+
 # Command: make up
 up: check-env setup-dirs build init
 	@echo "🚀 Starting Airflow stack with .env configuration..."
@@ -28,32 +30,27 @@ build:
 	@echo "🔨 Building Airflow images..."
 	docker compose build
 
-# Initialize Airflow
+# Initialize Airflow (safe to rerun)
 init:
-	@echo "⚙️ Checking if Airflow DB is already initialized..."
-	@if docker compose exec -T postgres psql -U airflow -d airflow -c '\dt' >/dev/null 2>&1; then \
-		echo "✅ Airflow DB already initialized, skipping init."; \
-	else \
-		echo "🔧 Initializing Airflow database and users..."; \
-		docker compose run --rm airflow-init; \
-	fi
+	@echo "⚙️ Initializing Airflow database and users..."
+	docker compose run --rm airflow-init
 
 # Ensure required folders exist with correct ownership
 setup-dirs:
-	@echo "📂 Creating and fixing permissions for data/ and output/..."
-	mkdir -p data output
-	sudo chown -R 50000:0 data output
-	sudo chmod -R 775 data output
+	@echo "📂 Creating data/ and output/ folders..."
+	@python -c "import os; os.makedirs('data', exist_ok=True); os.makedirs('output', exist_ok=True)"
+	@echo "🔧 Setting folder permissions (best-effort, platform-dependent)..."
+	@python -c "import os, sys; \
+try: os.chmod('data', 0o775); os.chmod('output', 0o775); \
+except PermissionError: print('⚠️ Could not set permissions, check manually.')"
 
-# Ensure .env exists
+# Ensure .env exists (cross-platform)
 check-env:
-	@if [ ! -f $(ENV_FILE) ]; then \
-		echo "⚙️  .env not found, creating one..."; \
-		read -p 'Enter your OpenWeather API key: ' APIKEY; \
-		echo "AIRFLOW_UID=50000" > $(ENV_FILE); \
-		echo "AIRFLOW_GID=0" >> $(ENV_FILE); \
-		echo "OPENWEATHER_API_KEY=$$APIKEY" >> $(ENV_FILE); \
-		echo ".env file created ✅"; \
-	else \
-		echo "✅ Using existing .env"; \
-	fi
+	@python -c "import os; env_file='.env'; \
+if not os.path.exists(env_file): \
+    api_key=input('Enter your OpenWeather API key: '); \
+    with open(env_file,'w') as f: \
+        f.write(f'AIRFLOW_UID=50000\nAIRFLOW_GID=0\nOPENWEATHER_API_KEY={api_key}\n'); \
+    print('.env file created ✅'); \
+else: \
+    print('✅ Using existing .env')"
