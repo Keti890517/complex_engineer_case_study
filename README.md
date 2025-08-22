@@ -25,6 +25,7 @@ This project demonstrates an ETL pipeline combining Northwind SQLite data with O
 - Docker & Docker Compose installed
 - Python 3.12 (for local tests outside Docker)
 - Optional: `sudo` access for folder ownership
+- On Windows you need to have GNU make for the MAKEFILE: https://sourceforge.net/projects/gnuwin32/
 
 ---
 
